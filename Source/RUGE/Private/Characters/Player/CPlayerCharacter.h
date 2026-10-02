@@ -9,6 +9,7 @@
 
 class USpotLightComponent;
 class USoundBase;
+class UCInteractionComponent;
 
 UCLASS()
 class ACPlayerCharacter : public ACharacter
@@ -39,6 +40,7 @@ public:
 private:
 	void HandleLookInput(const struct FInputActionValue& InputActionValue);
 	void HandleMoveInput(const struct FInputActionValue& InputActionValue);
+	void HandleInteractInput(const struct FInputActionValue& InputActionValue);
 	
 	FVector GetRightDir() const;
 	FVector GetLookFwdDir() const;
@@ -58,6 +60,19 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Input")
 	class UInputAction* FlashlightInputAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	class UInputAction* InteractInputAction;
+	
+	
+	//-----------------------------------------------------//
+	//                     Flashlight                     //
+	//----------------------------------------------------//
+	
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Interaction")
+	UCInteractionComponent* InteractionComponent;
+	
 	
 	//-----------------------------------------------------//
 	//                     Flashlight                     //
