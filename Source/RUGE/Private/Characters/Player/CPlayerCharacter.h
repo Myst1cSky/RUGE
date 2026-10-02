@@ -6,6 +6,10 @@
 #include "GameFramework/Character.h"
 #include "CPlayerCharacter.generated.h"
 
+
+class USpotLightComponent;
+class USoundBase;
+
 UCLASS()
 class ACPlayerCharacter : public ACharacter
 {
@@ -25,6 +29,8 @@ protected:
 public:	
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void PawnClientRestart() override;
+	void CreateFlashlight();
 	
 	//-----------------------------------------------------//
 	//                     Input                          //
@@ -49,4 +55,23 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* MoveInputAction;
+	
+	UPROPERTY(EditAnywhere, Category = "Input")
+	class UInputAction* FlashlightInputAction;
+	
+	//-----------------------------------------------------//
+	//                     Flashlight                     //
+	//----------------------------------------------------//
+	
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Flashlight")
+	USpotLightComponent* Flashlight;
+	
+	UPROPERTY(EditAnywhere, Category = "Flashlight")
+	USoundBase* FlashlightSound;
+	
+	bool bIsFlashlightOn = false;
+	
+	void ToggleFlashlight();
+	void UpdateFlashlightRotaion();
 };
