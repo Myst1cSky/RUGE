@@ -39,8 +39,23 @@ void ACDoor::Tick(float DeltaTime)
 
 void ACDoor::Interact(AActor* Interactor)
 {
-	bIsOpen = !bIsOpen;
-	TargetYaw = bIsOpen ? OpenAngle : 0.f;
+	if (bIsOpen)
+	{
+		bIsOpen = false;
+		TargetYaw = 0.f;
+		return;
+		//Closing: always return to 0
+	}
+	
+	bIsOpen = true;
+	
+	const FVector HingeToDoor = DoorMesh->Bounds.Origin - GetActorLocation();
+	const FVector HingeToPlayer = Interactor->GetActorLocation() - GetActorLocation();
+	
+	const float Cross = HingeToDoor.X * HingeToPlayer.Y - HingeToDoor.Y * HingeToPlayer.X;
+	
+	TargetYaw = (Cross >= 0.f) ? -OpenAngle : OpenAngle;
+	// Swing away from the player
 }
 
 FText ACDoor::GetPromptText() const
