@@ -7,6 +7,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Interaction/CInteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values
@@ -19,6 +20,8 @@ ACPlayerCharacter::ACPlayerCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(720.f);
 	
 	CreateFlashlight();
+	
+	InteractionComponent = CreateDefaultSubobject<UCInteractionComponent>(TEXT("InteractionComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -70,6 +73,7 @@ void ACPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Triggered, this, &ACPlayerCharacter::Jump);
 		EnhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ACPlayerCharacter::HandleLookInput);
 		EnhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &ACPlayerCharacter::HandleMoveInput);
+		EnhancedInputComponent->BindAction(InteractInputAction, ETriggerEvent::Started, this, &ACPlayerCharacter::HandleInteractInput);
 		
 		if (FlashlightInputAction)
 		{
@@ -93,6 +97,14 @@ void ACPlayerCharacter::HandleMoveInput(const struct FInputActionValue& InputAct
 	InputAction.Normalize();
 	
 	AddMovementInput(GetMoveFwdDir() * InputAction.Y + GetRightDir() * InputAction.X);
+}
+
+void ACPlayerCharacter::HandleInteractInput(const struct FInputActionValue& InputActionValue)
+{
+	if (InteractionComponent)
+	{
+		InteractionComponent->TryInteract();
+	}
 }
 
 FVector ACPlayerCharacter::GetRightDir() const
