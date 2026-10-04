@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
+#include "Blueprint/UserWidget.h"
 #include "Characters/Player/CPlayerCharacter.h"
 #include "Characters/Player/CPlayerController.h"
 #include "Components/SpotlightComponent.h"
@@ -8,7 +9,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/CInteractionComponent.h"
+#include "InputCoreTypes.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sanity/CSanityComponent.h"
+#include "Sanity/CSanityWidget.h"
 
 // Sets default values
 ACPlayerCharacter::ACPlayerCharacter()
@@ -22,6 +26,7 @@ ACPlayerCharacter::ACPlayerCharacter()
 	CreateFlashlight();
 	
 	InteractionComponent = CreateDefaultSubobject<UCInteractionComponent>(TEXT("InteractionComponent"));
+	SanityComponent = CreateDefaultSubobject<UCSanityComponent>(TEXT("SanityComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -50,6 +55,20 @@ void ACPlayerCharacter::PawnClientRestart()
 		EnhancedInputLocalPlayerSubsystem->ClearAllMappings();
 		EnhancedInputLocalPlayerSubsystem->AddMappingContext(GameplayMappingContext, 0);
 	}
+	
+	if (IsLocallyControlled() && SanityWidgetClass && !SanityWidget)
+	{
+		if (APlayerController* PC = GetController<APlayerController>())
+		{
+			SanityWidget = CreateWidget<UCSanityWidget>(PC, SanityWidgetClass);
+			if (SanityWidget)
+			{
+				SanityWidget->InitWidget(SanityComponent);
+				SanityWidget->AddToViewport();
+			}
+		}
+	}
+	
 }
 
 void ACPlayerCharacter::CreateFlashlight()
@@ -79,6 +98,12 @@ void ACPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		{
 			EnhancedInputComponent->BindAction(FlashlightInputAction, ETriggerEvent::Started, this, &ACPlayerCharacter::ToggleFlashlight);
 		}
+		
+#if !UE_BUILD_SHIPPING
+		PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ACPlayerCharacter::DebugDrainSanity);
+		PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ACPlayerCharacter::DebugRestoreSanity);
+#endif
+		
 	}
 	
 
@@ -134,5 +159,15 @@ void ACPlayerCharacter::UpdateFlashlightRotaion()
 	{
 		Flashlight->SetWorldRotation(GetControlRotation());
 	}
+}
+
+void ACPlayerCharacter::DebugDrainSanity()
+{
+	if (SanityComponent) SanityComponent->Drain(10.f, TEXT("Debug"));
+}
+
+void ACPlayerCharacter::DebugRestoreSanity()
+{
+	if (SanityComponent) SanityComponent->Restore(5.f);
 }
 

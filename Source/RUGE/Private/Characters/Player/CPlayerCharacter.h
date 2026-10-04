@@ -10,6 +10,8 @@
 class USpotLightComponent;
 class USoundBase;
 class UCInteractionComponent;
+class UCSanityComponent;
+class UCSanityWidget;
 
 UCLASS()
 class ACPlayerCharacter : public ACharacter
@@ -89,4 +91,22 @@ protected:
 	
 	void ToggleFlashlight();
 	void UpdateFlashlightRotaion();
+	
+	//-----------------------------------------------------//
+	//                      Sanity                        //
+	//----------------------------------------------------//
+
+protected:
+	UPROPERTY(VisibleAnywhere, Category = "Sanity")
+	UCSanityComponent* SanityComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sanity")
+	TSubclassOf<UCSanityWidget> SanityWidgetClass;
+
+	UPROPERTY()
+	UCSanityWidget* SanityWidget;
+
+	// Debug only
+	void DebugDrainSanity();
+	void DebugRestoreSanity();
 };
