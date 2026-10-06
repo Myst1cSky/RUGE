@@ -3,6 +3,8 @@
 
 #include "Interaction/CDoor.h"
 #include "Components/StaticMeshComponent.h"
+#include "Framework/CGameModeBase.h"
+#include "Rules/CRuleManager.h"
 
 // Sets default values
 ACDoor::ACDoor()
@@ -48,6 +50,16 @@ void ACDoor::Interact(AActor* Interactor)
 	}
 	
 	bIsOpen = true;
+	
+	// Tells the rule system that the door was opened
+	if (ACGameModeBase* GameModeBase = GetWorld()->GetAuthGameMode<ACGameModeBase>())
+	{
+		if (UCRuleManager* RuleManager = GameModeBase->GetRuleManager())
+		{
+			RuleManager->ReportEvent(TEXT("Door.Open"));
+		}
+	}
+
 	
 	const FVector HingeToDoor = DoorMesh->Bounds.Origin - GetActorLocation();
 	const FVector HingeToPlayer = Interactor->GetActorLocation() - GetActorLocation();

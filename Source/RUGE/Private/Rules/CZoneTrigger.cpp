@@ -2,26 +2,54 @@
 
 
 #include "Rules/CZoneTrigger.h"
+#include "Components/BoxComponent.h"
+#include "GameFramework/Pawn.h"
+#include "Framework/CGameModeBase.h"
+#include "Rules/CRuleManager.h"
 
 // Sets default values
 ACZoneTrigger::ACZoneTrigger()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	
+	Box = CreateDefaultSubobject<UBoxComponent>(TEXT("Box"));
+	SetRootComponent(Box);
+	Box->SetBoxExtent(FVector(200.f, 200.f, 100.f));
+	Box->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
+	Box->SetGenerateOverlapEvents(true);
 }
 
-// Called when the game starts or when spawned
 void ACZoneTrigger::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	Box->OnComponentBeginOverlap.AddDynamic(this, &ACZoneTrigger::OnBeginOverlap);
+	Box->OnComponentEndOverlap.AddDynamic(this, &ACZoneTrigger::OnEndOverlap);
 }
 
-// Called every frame
-void ACZoneTrigger::Tick(float DeltaTime)
+void ACZoneTrigger::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Super::Tick(DeltaTime);
-
+	Report(OtherActor, TEXT(".Enter"));
 }
+
+void ACZoneTrigger::OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	Report(OtherActor, TEXT(".Exit"));
+}
+
+void ACZoneTrigger::Report(AActor* Other, const TCHAR* Suffix)
+{
+	const APawn* Pawn = Cast<APawn>(Other);
+	if (!Pawn || !Pawn->IsPlayerControlled()) return;
+
+	if (ACGameModeBase* GameModeBase = GetWorld()->GetAuthGameMode<ACGameModeBase>())
+	{
+		if (UCRuleManager* RuleManager = GameModeBase->GetRuleManager())
+		{
+			RuleManager->ReportEvent(FName(*FString::Printf(TEXT("%s%s"), *ZoneTag.ToString(), Suffix)));
+		}
+	}
+}
+
 

@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "CZoneTrigger.generated.h"
 
+class UBoxComponent;
+
 UCLASS()
 class ACZoneTrigger : public AActor
 {
@@ -18,9 +20,21 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Zone")
+	TObjectPtr<UBoxComponent> Box;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Zone")
+	FName ZoneTag = FName(TEXT("Zone.StartRoom"));
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION()
+	void OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	void Report(AActor* Other, const TCHAR* Suffix);
 };
