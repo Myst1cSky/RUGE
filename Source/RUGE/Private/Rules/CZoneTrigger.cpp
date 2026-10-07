@@ -16,6 +16,7 @@ ACZoneTrigger::ACZoneTrigger()
 	SetRootComponent(Box);
 	Box->SetBoxExtent(FVector(200.f, 200.f, 100.f));
 	Box->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
+	Box->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 	Box->SetGenerateOverlapEvents(true);
 }
 

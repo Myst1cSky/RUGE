@@ -28,7 +28,7 @@ protected:
 	virtual void BeginPlay() override;
 	
 	UPROPERTY(EditAnywhere, Category = "Interaction")
-	float InteractDistance = 250.f;
+	float InteractDistance = 300.f;
 
 private:
 	UPROPERTY()
