@@ -18,6 +18,8 @@ struct FCActiveRule
 	FCRuleData Data;
 	bool bActive = false;
 	bool bResolved = false;
+	float DrainTimer = 0.f;
+	bool bViolationAnnounced = false;
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -43,6 +45,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Rules")
 	FOnRuleBroken OnRuleBroken;
+	
+	// Zone Triggers Call this when the player enters or leaves
+	void SetZoneOccupied(FName ZoneTag, bool bOccupied);
 
 private:	
 	void Resolve(FCActiveRule& Rule, bool bDidIt);
@@ -52,4 +57,7 @@ private:
 	float RoundTime = 0.f;
 	bool bRoundRunning = false;
 	bool bFlawless = true;
+	
+	void TickContinuous(FCActiveRule& Rule, float DeltaTime);
+	TSet<FName> OccupiedZones;
 };

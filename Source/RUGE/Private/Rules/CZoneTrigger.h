@@ -36,5 +36,5 @@ public:
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	void Report(AActor* Other, const TCHAR* Suffix);
+	void Report(AActor* Other, bool bEntering);
 };

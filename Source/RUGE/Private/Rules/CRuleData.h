@@ -53,4 +53,22 @@ struct FCRuleData : public FTableRowBase
 	// Label passed to Drain (useful for narrator reactions later)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName Reason;
+	
+	//---------Continuous Drain Rules----------
+	
+	// If true, this rule drains sanity over time instead of one-time on a verdict
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bContinuous = false;
+	
+	// The zone to watch, e.g. Zone.StartRoom (matches the Zone Tag on the placed trigger)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName DrainZone;
+	
+	// true = drain while the player is inside the zone, false = drain while outside it
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDrainWhenInside = false;
+	
+	// Sanity lost each second of violation
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DrainPerSecond = 1.f;
 };

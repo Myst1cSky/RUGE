@@ -64,9 +64,25 @@ void UCRuleManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 		{
 			R.bActive = true;
 		}
+		if (!R.bActive) continue;
+
+		const bool bWindowClosed = RoundTime >= R.Data.WindowStart + R.Data.WindowDuration;
+
+		if (R.Data.bContinuous)
+		{
+			if (bWindowClosed)
+			{
+				R.bResolved = true;   // simply stops draining
+			}
+			else
+			{
+				TickContinuous(R, DeltaTime);
+			}
+			continue;
+		}
 
 		// Window closed with no event: the player did nothing
-		if (R.bActive && RoundTime >= R.Data.WindowStart + R.Data.WindowDuration)
+		if (bWindowClosed)
 		{
 			Resolve(R, false);
 		}
@@ -79,7 +95,7 @@ void UCRuleManager::ReportEvent(FName EventTag)
 	
 	for (FCActiveRule& R : Rules)
 	{
-		if (!R.bResolved && R.bActive && R.Data.WatchedEvent == EventTag)
+		if (!R.bResolved && R.bActive && !R.Data.bContinuous && R.Data.WatchedEvent == EventTag)
 		{
 			Resolve(R, true);
 		}
@@ -92,7 +108,7 @@ bool UCRuleManager::EndRound()
 	
 	for (FCActiveRule& R : Rules)
 	{
-		if (!R.bResolved)
+		if (!R.bResolved && !R.Data.bContinuous)
 		{
 			Resolve(R, false);
 		}
@@ -101,6 +117,18 @@ bool UCRuleManager::EndRound()
 	const bool bResult = bFlawless;
 	Rules.Reset();
 	return bResult;
+}
+
+void UCRuleManager::SetZoneOccupied(FName ZoneTag, bool bOccupied)
+{
+	if (bOccupied)
+	{
+		OccupiedZones.Add(ZoneTag);
+	}
+	else
+	{
+		OccupiedZones.Remove(ZoneTag);
+	}
 }
 
 void UCRuleManager::Resolve(FCActiveRule& Rule, bool bDidIt)
@@ -136,5 +164,43 @@ UCSanityComponent* UCRuleManager::GetPlayerSanity() const
 		return Pawn->FindComponentByClass<UCSanityComponent>();
 	}
 	return nullptr;
+}
+
+void UCRuleManager::TickContinuous(FCActiveRule& Rule, float DeltaTime)
+{
+	const bool bInside = OccupiedZones.Contains(Rule.Data.DrainZone);
+	const bool bViolating = (bInside == Rule.Data.bDrainWhenInside);
+
+	if (!bViolating)
+	{
+		Rule.DrainTimer = 0.f; // back in the right place, start fresh next time
+		return;
+	}
+
+	// First violation of this rule: mark the round and announce it once
+	if (!Rule.bViolationAnnounced)
+	{
+		Rule.bViolationAnnounced = true;
+		bFlawless = false;
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Red,
+				FString::Printf(TEXT("RULE BROKEN: %s"), *Rule.Data.RuleID.ToString()));
+		}
+		OnRuleBroken.Broadcast(Rule.Data.RuleID);
+	}
+
+	// One drain per full second, independent of frame rate
+	Rule.DrainTimer += DeltaTime;
+	while (Rule.DrainTimer >= 1.f)
+	{
+		Rule.DrainTimer -= 1.f;
+
+		if (UCSanityComponent* Sanity = GetPlayerSanity())
+		{
+			Sanity->Drain(Rule.Data.DrainPerSecond, Rule.Data.Reason);
+		}
+	}
 }
 

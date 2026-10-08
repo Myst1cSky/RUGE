@@ -25,21 +25,29 @@ void ACZoneTrigger::BeginPlay()
 	Super::BeginPlay();
 	Box->OnComponentBeginOverlap.AddDynamic(this, &ACZoneTrigger::OnBeginOverlap);
 	Box->OnComponentEndOverlap.AddDynamic(this, &ACZoneTrigger::OnEndOverlap);
+	
+	// If the player already starts inside the zone, record it
+	TArray<AActor*> Overlapping;
+	Box->GetOverlappingActors(Overlapping, APawn::StaticClass());
+	for (AActor* Actor : Overlapping)
+	{
+		Report(Actor, true);
+	}
 }
 
 void ACZoneTrigger::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Report(OtherActor, TEXT(".Enter"));
+	Report(OtherActor, true);
 }
 
 void ACZoneTrigger::OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	Report(OtherActor, TEXT(".Exit"));
+	Report(OtherActor, false);
 }
 
-void ACZoneTrigger::Report(AActor* Other, const TCHAR* Suffix)
+void ACZoneTrigger::Report(AActor* Other, bool bEntering)
 {
 	const APawn* Pawn = Cast<APawn>(Other);
 	if (!Pawn || !Pawn->IsPlayerControlled()) return;
@@ -48,7 +56,10 @@ void ACZoneTrigger::Report(AActor* Other, const TCHAR* Suffix)
 	{
 		if (UCRuleManager* RuleManager = GameModeBase->GetRuleManager())
 		{
-			RuleManager->ReportEvent(FName(*FString::Printf(TEXT("%s%s"), *ZoneTag.ToString(), Suffix)));
+			RuleManager->SetZoneOccupied(ZoneTag, bEntering);
+
+			const FString Suffix = bEntering ? TEXT(".Enter") : TEXT(".Exit");
+			RuleManager->ReportEvent(FName(*(ZoneTag.ToString() + Suffix)));
 		}
 	}
 }
