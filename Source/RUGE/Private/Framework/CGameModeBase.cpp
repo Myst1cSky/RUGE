@@ -3,6 +3,7 @@
 
 #include "Framework/CGameModeBase.h"
 #include "Rules/CRuleManager.h"
+#include "Narrator/CNarratorComponent.h"
 #include "Sanity/CSanityComponent.h"
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
@@ -21,6 +22,7 @@ namespace
 ACGameModeBase::ACGameModeBase()
 {
 	RuleManager = CreateDefaultSubobject<UCRuleManager>(TEXT("RuleManager"));
+    Narrator = CreateDefaultSubobject<UCNarratorComponent>(TEXT("Narrator"));
 }
 
 void ACGameModeBase::BeginPlay()
@@ -39,8 +41,15 @@ void ACGameModeBase::StartGame()
     if (UCSanityComponent* Sanity = GetPlayerSanity())
     {
         Sanity->OnSanityDepleted.AddDynamic(this, &ACGameModeBase::HandleSanityDepleted);
+        Sanity->OnStageChanged.AddDynamic(this, &ACGameModeBase::HandleStageChanged);
     }
+    
+    RuleManager->OnRuleAnnounced.AddDynamic(this, &ACGameModeBase::HandleRuleAnnounced);
+    RuleManager->OnRuleExpired.AddDynamic(this, &ACGameModeBase::HandleRuleExpired);
+    RuleManager->OnRuleBroken.AddDynamic(this, &ACGameModeBase::HandleRuleBroken);
 
+    Narrator->Init(NarratorTable, SubtitleWidgetClass);
+    
     RuleManager->LoadRules(RuleTable);
     StartHour(1);
 }
@@ -57,6 +66,10 @@ void ACGameModeBase::StartHour(int32 Hour)
             FString::Printf(TEXT("=== HOUR %d  (%s) ==="), Hour, *HourLabel(Hour)));
     }
 
+    // The hour line is queued first, so the new rules follow it
+    Narrator->SayHour(Hour,
+        FText::FromString(FString::Printf(TEXT("It is now %s."), *HourLabel(Hour))));
+    
     RuleManager->StartHour(Hour);
     GetWorldTimerManager().SetTimer(HourTimer, this, &ACGameModeBase::EndHour, HourDuration, false);
 }
@@ -94,6 +107,9 @@ void ACGameModeBase::GameComplete()
     bGameEnded = true;
     RuleManager->StopRules();
 
+    Narrator->SayLine(TEXT("GameComplete"),
+       FText::FromString(TEXT("You made it. It is morning.")), ENarratorPriority::High);
+    
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green,
@@ -114,11 +130,65 @@ void ACGameModeBase::GameOver()
     GetWorldTimerManager().ClearTimer(HourTimer);
     RuleManager->StopRules();
 
+    Narrator->SayLine(TEXT("GameOver"),
+        FText::FromString(TEXT("I tried to warn you.")), ENarratorPriority::High);
+    
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red,
             FString::Printf(TEXT("GAME OVER - You lost your mind at Hour %d"), CurrentHour));
     }
+}
+
+void ACGameModeBase::ReplayRules()
+{
+    // Ignore the key while he is already talking, so it can't be spammed
+    if (bGameEnded || Narrator->IsBusy()) return;
+
+    RuleManager->AnnounceActiveRules();
+}
+
+void ACGameModeBase::HandleStageChanged(ESanityStage OldStage, ESanityStage NewStage)
+{
+    // Lower sanity, lower voice
+    switch (NewStage)
+    {
+    case ESanityStage::High:   Narrator->SetVoicePitch(1.0f);  break;
+    case ESanityStage::Medium: Narrator->SetVoicePitch(0.95f); break;
+    default:                   Narrator->SetVoicePitch(0.85f); break;
+    }
+
+    // Only when sanity gets worse, and only if he isn't busy (Low priority)
+    if (static_cast<uint8>(NewStage) > static_cast<uint8>(OldStage) && !bGameEnded)
+    {
+        if (NewStage == ESanityStage::Medium)
+        {
+            Narrator->SayLine(TEXT("Stage_Medium"), FText::GetEmpty(), ENarratorPriority::Low);
+        }
+        else if (NewStage == ESanityStage::Low)
+        {
+            Narrator->SayLine(TEXT("Stage_Low"), FText::GetEmpty(), ENarratorPriority::Low);
+        }
+    }
+}
+
+void ACGameModeBase::HandleRuleAnnounced(FName RuleID, FText RuleText)
+{
+    Narrator->SayRule(RuleID, RuleText);
+}
+
+void ACGameModeBase::HandleRuleExpired(FName RuleID, FText RuleText)
+{
+    const FString Text = FString::Printf(TEXT("The rule \"%s\" no longer applies."), *RuleText.ToString());
+    Narrator->SayLine(FName(*(FString(TEXT("Expired_")) + RuleID.ToString())), FText::FromString(Text));
+}
+
+void ACGameModeBase::HandleRuleBroken(FName RuleID)
+{
+    if (!bGameEnded)
+    {
+        Narrator->SayReaction(RuleID);
+    } 
 }
 
 UCSanityComponent* ACGameModeBase::GetPlayerSanity() const

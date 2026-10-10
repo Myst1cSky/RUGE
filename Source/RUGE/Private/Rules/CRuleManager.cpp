@@ -56,18 +56,13 @@ void UCRuleManager::StartHour(int32 Hour)
         R.DrainTimer = 0.f;
         R.bViolationAnnounced = false;
 
-        if (!GEngine) continue;
-
-        // Temporary stand-in for the narrator
         if (R.Data.StartHour == Hour)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan,
-                FString::Printf(TEXT("NEW RULE: %s"), *R.Data.RuleText.ToString()));
+            OnRuleAnnounced.Broadcast(R.Data.RuleID, R.Data.RuleText);
         }
         else if (R.Data.EndHour > 0 && R.Data.EndHour == Hour - 1)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Orange,
-                FString::Printf(TEXT("NO LONGER APPLIES: %s"), *R.Data.RuleText.ToString()));
+            OnRuleExpired.Broadcast(R.Data.RuleID, R.Data.RuleText);
         }
     }
 }
@@ -231,3 +226,13 @@ UCSanityComponent* UCRuleManager::GetPlayerSanity() const
     return nullptr;
 }
 
+void UCRuleManager::AnnounceActiveRules()
+{
+    for (const FCActiveRule& R : Rules)
+    {
+        if (IsInHour(R.Data, CurrentHour))
+        {
+            OnRuleAnnounced.Broadcast(R.Data.RuleID, R.Data.RuleText);
+        }
+    }
+}

@@ -7,6 +7,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Framework/CGameModeBase.h"
 #include "Interaction/CInteractionComponent.h"
 #include "InputCoreTypes.h"
 #include "Sanity/CSanityComponent.h"
@@ -100,11 +101,9 @@ void ACPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 #if !UE_BUILD_SHIPPING
 		PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ACPlayerCharacter::DebugDrainSanity);
 		PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ACPlayerCharacter::DebugRestoreSanity);
+		PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ACPlayerCharacter::ReplayRulesPressed);
 #endif
-		
 	}
-	
-
 }
 
 void ACPlayerCharacter::HandleLookInput(const struct FInputActionValue& InputActionValue)
@@ -169,3 +168,10 @@ void ACPlayerCharacter::DebugRestoreSanity()
 	if (SanityComponent) SanityComponent->Restore(5.f);
 }
 
+void ACPlayerCharacter::ReplayRulesPressed()
+{
+	if (ACGameModeBase* GameModeBase = GetWorld()->GetAuthGameMode<ACGameModeBase>())
+	{
+		GameModeBase->ReplayRules();
+	}
+}

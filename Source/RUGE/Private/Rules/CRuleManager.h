@@ -12,6 +12,7 @@ class UCSanityComponent;
 class ACZoneTrigger;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRuleBroken, FName, RuleID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRuleAnnounced, FName, RuleID, FText, RuleText);
 
 // Runtime state for one rule (not a UObject, so no reflection needed)
 struct FCActiveRule
@@ -46,7 +47,10 @@ public:
 
 	// Stops all rule checking (game over or game complete)
 	void StopRules();
-
+	
+	// Re-announces every rule that applies this hour (for the replay key)
+	void AnnounceActiveRules();
+	
 	// Called by zones and interactables (e.g. "Door.Open")
 	void ReportEvent(FName EventTag);
 
@@ -55,6 +59,14 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Rules")
 	FOnRuleBroken OnRuleBroken;
+	
+	// A rule just started applying (or is being replayed)
+	UPROPERTY(BlueprintAssignable, Category = "Rules")
+	FOnRuleAnnounced OnRuleAnnounced;
+
+	// A rule just stopped applying
+	UPROPERTY(BlueprintAssignable, Category = "Rules")
+	FOnRuleAnnounced OnRuleExpired;
 
 private:	
 	bool IsInHour(const FCRuleData& Data, int32 Hour) const;

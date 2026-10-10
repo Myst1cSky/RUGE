@@ -8,6 +8,8 @@
 
 class UCRuleManager;
 class UCSanityComponent;
+class UCNarratorComponent;
+class UCSubtitleWidget;
 class UDataTable;
 
 UCLASS()
@@ -19,16 +21,28 @@ public:
 	ACGameModeBase();
 
 	UCRuleManager* GetRuleManager() const { return RuleManager; }
-
+	
+	// Called by the player's replay key
+	void ReplayRules();
+	
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, Category = "Rules")
 	TObjectPtr<UCRuleManager> RuleManager;
 
+	UPROPERTY(VisibleAnywhere, Category = "Narrator")
+	TObjectPtr<UCNarratorComponent> Narrator;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Rules")
 	TObjectPtr<UDataTable> RuleTable;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Narrator")
+	TObjectPtr<UDataTable> NarratorTable;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Narrator")
+	TSubclassOf<UCSubtitleWidget> SubtitleWidgetClass;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Night")
 	int32 TotalHours = 8;
 
@@ -49,6 +63,18 @@ private:
 	UFUNCTION()
 	void HandleSanityDepleted();
 
+	UFUNCTION()
+	void HandleStageChanged(ESanityStage OldStage, ESanityStage NewStage);
+
+	UFUNCTION()
+	void HandleRuleAnnounced(FName RuleID, FText RuleText);
+
+	UFUNCTION()
+	void HandleRuleExpired(FName RuleID, FText RuleText);
+
+	UFUNCTION()
+	void HandleRuleBroken(FName RuleID);
+	
 	UCSanityComponent* GetPlayerSanity() const;
 
 	int32 CurrentHour = 0;

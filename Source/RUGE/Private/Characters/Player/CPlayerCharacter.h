@@ -68,6 +68,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	class UInputAction* InteractInputAction;
 	
+	void ReplayRulesPressed();
 	
 	//-----------------------------------------------------//
 	//                     Interation                     //
