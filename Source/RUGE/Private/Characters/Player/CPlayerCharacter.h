@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Sanity/CSanityComponent.h"
+#include "Sanity/CSanityWidget.h"
+#include "Interaction/CInteractionComponent.h"
 #include "CPlayerCharacter.generated.h"
-
 
 class USpotLightComponent;
 class USoundBase;

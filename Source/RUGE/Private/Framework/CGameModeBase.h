@@ -29,23 +29,29 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rules")
 	TObjectPtr<UDataTable> RuleTable;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Rounds")
-	float RoundDuration = 50.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	int32 TotalHours = 8;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Rounds")
-	float BreakDuration = 5.f;
+	// Real seconds per in-game hour
+	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	float HourDuration = 75.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Rounds")
-	int32 MaxRounds = 2;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Rounds")
-	float SanityRecoveryPerRound = 5.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	float SanityRecoveryPerHour = 5.f;
 
 private:
-	void StartRound(int32 Round);
-	void EndRound();
+	void StartGame();
+	void StartHour(int32 Hour);
+	void EndHour();
+	void GameComplete();
+	void GameOver();
+
+	UFUNCTION()
+	void HandleSanityDepleted();
+
 	UCSanityComponent* GetPlayerSanity() const;
 
-	int32 CurrentRound = 0;
-	FTimerHandle RoundTimer;
+	int32 CurrentHour = 0;
+	bool bGameEnded = false;
+	FTimerHandle HourTimer;
 };

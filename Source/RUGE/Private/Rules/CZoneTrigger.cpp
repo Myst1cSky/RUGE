@@ -5,6 +5,7 @@
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
 #include "Framework/CGameModeBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "Rules/CRuleManager.h"
 
 // Sets default values
@@ -33,6 +34,14 @@ void ACZoneTrigger::BeginPlay()
 	{
 		Report(Actor, true);
 	}
+	
+	if (ACGameModeBase* GameModeBase = GetWorld()->GetAuthGameMode<ACGameModeBase>())
+	{
+		if (UCRuleManager* RuleManager = GameModeBase->GetRuleManager())
+		{
+			RuleManager->RegisterZone(ZoneTag, this);
+		}
+	}
 }
 
 void ACZoneTrigger::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -56,12 +65,22 @@ void ACZoneTrigger::Report(AActor* Other, bool bEntering)
 	{
 		if (UCRuleManager* RuleManager = GameModeBase->GetRuleManager())
 		{
-			RuleManager->SetZoneOccupied(ZoneTag, bEntering);
-
 			const FString Suffix = bEntering ? TEXT(".Enter") : TEXT(".Exit");
 			RuleManager->ReportEvent(FName(*(ZoneTag.ToString() + Suffix)));
 		}
 	}
 }
 
+bool ACZoneTrigger::IsPlayerInside() const
+{
+	const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!Pawn) return false;
 
+	// Player position in the box's own space (handles rotation and scale)
+	const FVector Local = Box->GetComponentTransform().InverseTransformPosition(Pawn->GetActorLocation());
+	const FVector Extent = Box->GetUnscaledBoxExtent();
+
+	return FMath::Abs(Local.X) <= Extent.X
+		&& FMath::Abs(Local.Y) <= Extent.Y
+		&& FMath::Abs(Local.Z) <= Extent.Z;
+}

@@ -1,8 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-#include "Blueprint/UserWidget.h"
 #include "Characters/Player/CPlayerCharacter.h"
+#include "Blueprint/UserWidget.h"
 #include "Characters/Player/CPlayerController.h"
 #include "Components/SpotlightComponent.h"
 #include "EnhancedInputComponent.h"
@@ -10,7 +9,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Interaction/CInteractionComponent.h"
 #include "InputCoreTypes.h"
-#include "Kismet/GameplayStatics.h"
 #include "Sanity/CSanityComponent.h"
 #include "Sanity/CSanityWidget.h"
 

@@ -9,6 +9,7 @@
 
 class UDataTable;
 class UCSanityComponent;
+class ACZoneTrigger;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRuleBroken, FName, RuleID);
 
@@ -34,30 +35,37 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
-	void StartRound(UDataTable* Table, int32 Round);
-	
-	// Gives every unresolved rule its final verdict. 
-	// Returns true if the round had no mistakes.
-	bool EndRound();
-	
-	// Triggers and interactable(s) call this with an event name
+	// Reads every rule from the table once, at the start of the game
+	void LoadRules(UDataTable* Table);
+
+	// Resets per-hour state and announces new and expired rules
+	void StartHour(int32 Hour);
+
+	// Gives one-time rules their final verdict. Returns true if the hour had no mistakes.
+	bool EndHour();
+
+	// Stops all rule checking (game over or game complete)
+	void StopRules();
+
+	// Called by zones and interactables (e.g. "Door.Open")
 	void ReportEvent(FName EventTag);
-	
+
+	// Called by each zone when the game starts
+	void RegisterZone(FName ZoneTag, ACZoneTrigger* Zone);
+
 	UPROPERTY(BlueprintAssignable, Category = "Rules")
 	FOnRuleBroken OnRuleBroken;
-	
-	// Zone Triggers Call this when the player enters or leaves
-	void SetZoneOccupied(FName ZoneTag, bool bOccupied);
 
 private:	
+	bool IsInHour(const FCRuleData& Data, int32 Hour) const;
 	void Resolve(FCActiveRule& Rule, bool bDidIt);
+	void TickContinuous(FCActiveRule& Rule, float DeltaTime);
 	UCSanityComponent* GetPlayerSanity() const;
 
 	TArray<FCActiveRule> Rules;
-	float RoundTime = 0.f;
-	bool bRoundRunning = false;
+	TMap<FName, TWeakObjectPtr<ACZoneTrigger>> Zones;
+	int32 CurrentHour = 0;
+	float HourTime = 0.f;
+	bool bHourRunning = false;
 	bool bFlawless = true;
-	
-	void TickContinuous(FCActiveRule& Rule, float DeltaTime);
-	TSet<FName> OccupiedZones;
 };

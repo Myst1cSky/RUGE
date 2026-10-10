@@ -2,6 +2,7 @@
 
 
 #include "Rules/CRuleManager.h"
+#include "Rules/CZoneTrigger.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
@@ -14,193 +15,219 @@ UCRuleManager::UCRuleManager()
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
-void UCRuleManager::StartRound(UDataTable* Table, int32 Round)
+void UCRuleManager::RegisterZone(FName ZoneTag, ACZoneTrigger* Zone)
 {
-	Rules.Reset();
-	RoundTime = 0.f;
-	bFlawless = true;
-	bRoundRunning = false;
-	
-	if (!Table) return;
-	
-	Table->ForeachRow<FCRuleData>(TEXT("StartRound"),
-		[this, Round](const FName& Key, const FCRuleData& Row)
-		{
-			if (Row.Round == Round)
-			{
-				FCActiveRule NewRule;
-				NewRule.Data = Row;
-				Rules.Add(NewRule);
-			}
-		});
-	
-	// Temporary stand-in for the narrator and handbook
-	if (GEngine)
-	{
-		for (const FCActiveRule& R : Rules)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Cyan,
-				FString::Printf(TEXT("RULE: %s"), *R.Data.RuleText.ToString()));
-		}
-	}
-
-	bRoundRunning = true;
+    Zones.Add(ZoneTag, Zone);
 }
 
-// Called every frame
-void UCRuleManager::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UCRuleManager::LoadRules(UDataTable* Table)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
-	if (!bRoundRunning) return;
+    Rules.Reset();
+    if (!Table) return;
 
-	RoundTime += DeltaTime;
+    Table->ForeachRow<FCRuleData>(TEXT("LoadRules"),
+        [this](const FName& Key, const FCRuleData& Row)
+        {
+            FCActiveRule NewRule;
+            NewRule.Data = Row;
+            Rules.Add(NewRule);
+        });
+}
 
-	for (FCActiveRule& R : Rules)
-	{
-		if (R.bResolved) continue;
+bool UCRuleManager::IsInHour(const FCRuleData& Data, int32 Hour) const
+{
+    if (Hour < Data.StartHour) return false;
+    if (Data.EndHour > 0 && Hour > Data.EndHour) return false;
+    return true;
+}
 
-		if (!R.bActive && RoundTime >= R.Data.WindowStart)
-		{
-			R.bActive = true;
-		}
-		if (!R.bActive) continue;
+void UCRuleManager::StartHour(int32 Hour)
+{
+    CurrentHour = Hour;
+    HourTime = 0.f;
+    bFlawless = true;
+    bHourRunning = true;
 
-		const bool bWindowClosed = RoundTime >= R.Data.WindowStart + R.Data.WindowDuration;
+    for (FCActiveRule& R : Rules)
+    {
+        // Fresh state every hour
+        R.bActive = false;
+        R.bResolved = false;
+        R.DrainTimer = 0.f;
+        R.bViolationAnnounced = false;
 
-		if (R.Data.bContinuous)
-		{
-			if (bWindowClosed)
-			{
-				R.bResolved = true;   // simply stops draining
-			}
-			else
-			{
-				TickContinuous(R, DeltaTime);
-			}
-			continue;
-		}
+        if (!GEngine) continue;
 
-		// Window closed with no event: the player did nothing
-		if (bWindowClosed)
-		{
-			Resolve(R, false);
-		}
-	}
+        // Temporary stand-in for the narrator
+        if (R.Data.StartHour == Hour)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan,
+                FString::Printf(TEXT("NEW RULE: %s"), *R.Data.RuleText.ToString()));
+        }
+        else if (R.Data.EndHour > 0 && R.Data.EndHour == Hour - 1)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Orange,
+                FString::Printf(TEXT("NO LONGER APPLIES: %s"), *R.Data.RuleText.ToString()));
+        }
+    }
+}
+
+void UCRuleManager::TickComponent(float DeltaTime, ELevelTick TickType,
+    FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (!bHourRunning) return;
+
+    HourTime += DeltaTime;
+
+    for (FCActiveRule& R : Rules)
+    {
+        if (R.bResolved || !IsInHour(R.Data, CurrentHour)) continue;
+
+        if (!R.bActive && HourTime >= R.Data.WindowStart)
+        {
+            R.bActive = true;
+        }
+        if (!R.bActive) continue;
+
+        const bool bWindowClosed = HourTime >= R.Data.WindowStart + R.Data.WindowDuration;
+
+        if (R.Data.bContinuous)
+        {
+            if (bWindowClosed)
+            {
+                R.bResolved = true;   // stops draining until next hour
+            }
+            else
+            {
+                TickContinuous(R, DeltaTime);
+            }
+            continue;
+        }
+
+        // Window closed with no event: the player did nothing
+        if (bWindowClosed)
+        {
+            Resolve(R, false);
+        }
+    }
 }
 
 void UCRuleManager::ReportEvent(FName EventTag)
 {
-	if (!bRoundRunning) return;
-	
-	for (FCActiveRule& R : Rules)
-	{
-		if (!R.bResolved && R.bActive && !R.Data.bContinuous && R.Data.WatchedEvent == EventTag)
-		{
-			Resolve(R, true);
-		}
-	}
+    if (!bHourRunning) return;
+
+    for (FCActiveRule& R : Rules)
+    {
+        if (!R.bResolved && R.bActive && !R.Data.bContinuous
+            && IsInHour(R.Data, CurrentHour) && R.Data.WatchedEvent == EventTag)
+        {
+            Resolve(R, true);
+        }
+    }
 }
 
-bool UCRuleManager::EndRound()
+bool UCRuleManager::EndHour()
 {
-	bRoundRunning = false;
-	
-	for (FCActiveRule& R : Rules)
-	{
-		if (!R.bResolved && !R.Data.bContinuous)
-		{
-			Resolve(R, false);
-		}
-	}
-	
-	const bool bResult = bFlawless;
-	Rules.Reset();
-	return bResult;
+    bHourRunning = false;
+
+    for (FCActiveRule& R : Rules)
+    {
+        if (!R.bResolved && !R.Data.bContinuous && IsInHour(R.Data, CurrentHour))
+        {
+            Resolve(R, false);
+        }
+    }
+
+    return bFlawless;
 }
 
-void UCRuleManager::SetZoneOccupied(FName ZoneTag, bool bOccupied)
+void UCRuleManager::StopRules()
 {
-	if (bOccupied)
-	{
-		OccupiedZones.Add(ZoneTag);
-	}
-	else
-	{
-		OccupiedZones.Remove(ZoneTag);
-	}
+    bHourRunning = false;
 }
 
 void UCRuleManager::Resolve(FCActiveRule& Rule, bool bDidIt)
 {
-	Rule.bResolved = true;
+    Rule.bResolved = true;
 
-	// Action rules are followed by doing it, restraint rules by not doing it
-	const bool bFollowed = (Rule.Data.Kind == ERuleKind::Action) ? bDidIt : !bDidIt;
-	const bool bMistake = (bFollowed != Rule.Data.bIsTrue);
+    const bool bFollowed = (Rule.Data.Kind == ERuleKind::Action) ? bDidIt : !bDidIt;
+    const bool bMistake = (bFollowed != Rule.Data.bIsTrue);
 
-	if (!bMistake) return;
+    if (!bMistake) return;
 
-	bFlawless = false;
+    bFlawless = false;
 
-	if (UCSanityComponent* Sanity = GetPlayerSanity())
-	{
-		Sanity->Drain(Rule.Data.Penalty, Rule.Data.Reason);
-	}
+    if (UCSanityComponent* Sanity = GetPlayerSanity())
+    {
+        Sanity->Drain(Rule.Data.Penalty, Rule.Data.Reason);
+    }
 
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Red,
-			FString::Printf(TEXT("RULE BROKEN: %s"), *Rule.Data.RuleID.ToString()));
-	}
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Red,
+            FString::Printf(TEXT("RULE BROKEN: %s"), *Rule.Data.RuleID.ToString()));
+    }
 
-	OnRuleBroken.Broadcast(Rule.Data.RuleID);
-}
-
-UCSanityComponent* UCRuleManager::GetPlayerSanity() const
-{
-	if (APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
-	{
-		return Pawn->FindComponentByClass<UCSanityComponent>();
-	}
-	return nullptr;
+    OnRuleBroken.Broadcast(Rule.Data.RuleID);
 }
 
 void UCRuleManager::TickContinuous(FCActiveRule& Rule, float DeltaTime)
 {
-	const bool bInside = OccupiedZones.Contains(Rule.Data.DrainZone);
-	const bool bViolating = (bInside == Rule.Data.bDrainWhenInside);
+    const TWeakObjectPtr<ACZoneTrigger>* Found = Zones.Find(Rule.Data.DrainZone);
+    if (!Found || !Found->IsValid())
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetTypeHash(Rule.Data.RuleID)), 5.f, FColor::Orange,
+                FString::Printf(TEXT("Rule %s: no zone found with tag '%s'"),
+                    *Rule.Data.RuleID.ToString(), *Rule.Data.DrainZone.ToString()));
+        }
+        return;
+    }
 
-	if (!bViolating)
-	{
-		Rule.DrainTimer = 0.f; // back in the right place, start fresh next time
-		return;
-	}
+    const bool bInside = Found->Get()->IsPlayerInside();
+    const bool bViolating = (bInside == Rule.Data.bDrainWhenInside);
 
-	// First violation of this rule: mark the round and announce it once
-	if (!Rule.bViolationAnnounced)
-	{
-		Rule.bViolationAnnounced = true;
-		bFlawless = false;
+    if (!bViolating)
+    {
+        Rule.DrainTimer = 0.f;
+        return;
+    }
 
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Red,
-				FString::Printf(TEXT("RULE BROKEN: %s"), *Rule.Data.RuleID.ToString()));
-		}
-		OnRuleBroken.Broadcast(Rule.Data.RuleID);
-	}
+    if (!Rule.bViolationAnnounced)
+    {
+        Rule.bViolationAnnounced = true;
+        bFlawless = false;
 
-	// One drain per full second, independent of frame rate
-	Rule.DrainTimer += DeltaTime;
-	while (Rule.DrainTimer >= 1.f)
-	{
-		Rule.DrainTimer -= 1.f;
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 4.f, FColor::Red,
+                FString::Printf(TEXT("RULE BROKEN: %s"), *Rule.Data.RuleID.ToString()));
+        }
+        OnRuleBroken.Broadcast(Rule.Data.RuleID);
+    }
 
-		if (UCSanityComponent* Sanity = GetPlayerSanity())
-		{
-			Sanity->Drain(Rule.Data.DrainPerSecond, Rule.Data.Reason);
-		}
-	}
+    // One drain per full second, independent of frame rate
+    Rule.DrainTimer += DeltaTime;
+    while (Rule.DrainTimer >= 1.f)
+    {
+        Rule.DrainTimer -= 1.f;
+
+        if (UCSanityComponent* Sanity = GetPlayerSanity())
+        {
+            Sanity->Drain(Rule.Data.DrainPerSecond, Rule.Data.Reason);
+        }
+    }
+}
+
+UCSanityComponent* UCRuleManager::GetPlayerSanity() const
+{
+    if (APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
+    {
+        return Pawn->FindComponentByClass<UCSanityComponent>();
+    }
+    return nullptr;
 }
 

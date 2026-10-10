@@ -20,55 +20,57 @@ struct FCRuleData : public FTableRowBase
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName RuleID;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FText RuleText;
-	
+
+	// First hour the rule applies (1 to 8)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Round = 1;
-	
-	// If true, following the instruction is correct.
-	// If false, following it is the mistake.
+	int32 StartHour = 1;
+
+	// Last hour the rule applies. 0 = never expires.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsTrue = true;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ERuleKind Kind = ERuleKind::Restraint;
-	
-	// The event this rule watches, e.g. Zone.StartRoom.Exit or Door.Open
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName WatchedEvent;
-	
-	// Seconds after round start when the rule becomes active
+	int32 EndHour = 0;
+
+	// Seconds into each hour when the rule becomes active
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float WindowStart = 0.f;
-	
-	// How long the rule stays active
+
+	// How long it stays active each hour
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float WindowDuration = 30.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Penalty = 10.f;
-	
-	// Label passed to Drain (useful for narrator reactions later)
+	float WindowDuration = 75.f;
+
+	// Label shown in the sanity debug message
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName Reason;
-	
-	//---------Continuous Drain Rules----------
-	
-	// If true, this rule drains sanity over time instead of one-time on a verdict
+
+	// ---- One-time rules (Continuous unticked), judged once per hour ----
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsTrue = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ERuleKind Kind = ERuleKind::Restraint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName WatchedEvent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Penalty = 10.f;
+
+	// ---- Continuous rules (Continuous ticked) ----
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bContinuous = false;
-	
-	// The zone to watch, e.g. Zone.StartRoom (matches the Zone Tag on the placed trigger)
+
+	// Must match the Zone Tag on the placed zone exactly
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName DrainZone;
-	
-	// true = drain while the player is inside the zone, false = drain while outside it
+
+	// Ticked = drain while inside the zone. Unticked = drain while outside it.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bDrainWhenInside = false;
-	
-	// Sanity lost each second of violation
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DrainPerSecond = 1.f;
 };

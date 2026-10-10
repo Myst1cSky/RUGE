@@ -16,6 +16,7 @@ class ACZoneTrigger : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ACZoneTrigger();
+	bool IsPlayerInside() const;
 
 protected:
 	// Called when the game starts or when spawned
@@ -24,7 +25,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Zone")
 	TObjectPtr<UBoxComponent> Box;
 	
-	UPROPERTY(VisibleAnywhere, Category = "Zone")
+	UPROPERTY(EditAnywhere, Category = "Zone")
 	FName ZoneTag = FName(TEXT("Zone.StartRoom"));
 
 public:	
