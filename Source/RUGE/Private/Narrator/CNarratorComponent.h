@@ -42,6 +42,8 @@ public:
 	bool IsBusy() const { return bBusy; }
 	void StopAll();
 	
+	FSimpleMulticastDelegate OnQueueEmpty;
+	
 protected:
 	// Reading time per character for lines with no sound
 	UPROPERTY(EditAnywhere, Category = "Narrator")

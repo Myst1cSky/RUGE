@@ -118,7 +118,12 @@ void UCNarratorComponent::PlayNext()
 {
     if (Queue.IsEmpty())
     {
+        const bool bWasBusy = bBusy;
         bBusy = false;
+        if (bWasBusy)
+        {
+            OnQueueEmpty.Broadcast();
+        }
         return;
     }
 

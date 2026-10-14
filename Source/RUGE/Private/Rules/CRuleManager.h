@@ -45,22 +45,25 @@ public:
 	// Gives one-time rules their final verdict. Returns true if the hour had no mistakes.
 	bool EndHour();
 
-	// Stops all rule checking (game over or game complete)
+	// Stops all rule checking when game over or game complete
 	void StopRules();
 	
-	// Re-announces every rule that applies this hour (for the replay key)
+	// Re-announces every rule that applies this hour for the replay key
 	void AnnounceActiveRules();
 	
-	// Called by zones and interactables (e.g. "Door.Open")
+	// Called by zones and interactables
 	void ReportEvent(FName EventTag);
 
 	// Called by each zone when the game starts
 	void RegisterZone(FName ZoneTag, ACZoneTrigger* Zone);
+	
+	// Rules start being checked after the countdown
+	void BeginEnforcement();
 
 	UPROPERTY(BlueprintAssignable, Category = "Rules")
 	FOnRuleBroken OnRuleBroken;
 	
-	// A rule just started applying (or is being replayed)
+	// A rule just started applying or is being replayed
 	UPROPERTY(BlueprintAssignable, Category = "Rules")
 	FOnRuleAnnounced OnRuleAnnounced;
 

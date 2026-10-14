@@ -49,6 +49,7 @@ void ACGameModeBase::StartGame()
     RuleManager->OnRuleBroken.AddDynamic(this, &ACGameModeBase::HandleRuleBroken);
 
     Narrator->Init(NarratorTable, SubtitleWidgetClass);
+    Narrator->OnQueueEmpty.AddUObject(this, &ACGameModeBase::HandleNarratorIdle);
     
     RuleManager->LoadRules(RuleTable);
     StartHour(1);
@@ -71,7 +72,12 @@ void ACGameModeBase::StartHour(int32 Hour)
         FText::FromString(FString::Printf(TEXT("It is now %s."), *HourLabel(Hour))));
     
     RuleManager->StartHour(Hour);
-    GetWorldTimerManager().SetTimer(HourTimer, this, &ACGameModeBase::EndHour, HourDuration, false);
+    
+    Narrator->SayLine(TEXT("Countdown_Intro"),
+       FText::FromString(TEXT("The rules for this hour will apply in...")));
+
+    // The countdown begins when the narrator finishes the queue
+    bWaitingForNarrator = true;
 }
 
 void ACGameModeBase::EndHour()
@@ -128,6 +134,8 @@ void ACGameModeBase::GameOver()
 
     bGameEnded = true;
     GetWorldTimerManager().ClearTimer(HourTimer);
+    GetWorldTimerManager().ClearTimer(CountdownTimer);
+    bWaitingForNarrator = false;
     RuleManager->StopRules();
 
     Narrator->SayLine(TEXT("GameOver"),
@@ -138,6 +146,47 @@ void ACGameModeBase::GameOver()
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red,
             FString::Printf(TEXT("GAME OVER - You lost your mind at Hour %d"), CurrentHour));
     }
+}
+
+void ACGameModeBase::HandleNarratorIdle()
+{
+    if (!bWaitingForNarrator || bGameEnded) return;
+
+    bWaitingForNarrator = false;
+    CountdownRemaining = CountdownSeconds;
+
+    TickCountdown();
+    GetWorldTimerManager().SetTimer(CountdownTimer, this, &ACGameModeBase::TickCountdown, 1.f, true);
+}
+
+void ACGameModeBase::TickCountdown()
+{
+    if (bGameEnded)
+    {
+        GetWorldTimerManager().ClearTimer(CountdownTimer);
+        return;
+    }
+
+    if (CountdownRemaining <= 0)
+    {
+        GetWorldTimerManager().ClearTimer(CountdownTimer);
+        BeginRules();
+        return;
+    }
+
+    // High priority so each number replaces the last instead of waiting behind it
+    Narrator->SayLine(
+        FName(*FString::Printf(TEXT("Countdown_%d"), CountdownRemaining)),
+        FText::AsNumber(CountdownRemaining),
+        ENarratorPriority::High);
+
+    --CountdownRemaining;
+}
+
+void ACGameModeBase::BeginRules()
+{
+    RuleManager->BeginEnforcement();
+    GetWorldTimerManager().SetTimer(HourTimer, this, &ACGameModeBase::EndHour, HourDuration, false);
 }
 
 void ACGameModeBase::ReplayRules()

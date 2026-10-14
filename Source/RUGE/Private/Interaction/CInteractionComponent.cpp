@@ -25,7 +25,6 @@ void UCInteractionComponent::BeginPlay()
 	
 }
 
-
 // Called every frame
 void UCInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 	FActorComponentTickFunction* ThisTickFunction)
@@ -35,12 +34,16 @@ void UCInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
 	if (!OwnerPawn) return;
 	
-	const ACPlayerController* PC = Cast<ACPlayerController>(OwnerPawn->GetController());
+	const AController* PC = OwnerPawn->GetController();
 	if (!PC) return;
 	
 	FVector Start;
 	FRotator Rotation;
 	PC->GetPlayerViewPoint(Start, Rotation);
+	
+	AActor* Owner = GetOwner();
+	Owner->GetActorEyesViewPoint(Start, Rotation);
+	
 	const FVector End = Start + Rotation.Vector() * InteractDistance;
 	
 	FHitResult Hit;

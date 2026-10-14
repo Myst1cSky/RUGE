@@ -52,6 +52,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Night")
 	float SanityRecoveryPerHour = 5.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	int32 CountdownSeconds = 5;
 
 private:
 	void StartGame();
@@ -59,7 +62,18 @@ private:
 	void EndHour();
 	void GameComplete();
 	void GameOver();
+	void HandleNarratorIdle();
+	void TickCountdown();
+	void BeginRules();
 
+	bool bWaitingForNarrator = false;
+	int32 CountdownRemaining = 0;
+	FTimerHandle CountdownTimer;
+	
+	int32 CurrentHour = 0;
+	bool bGameEnded = false;
+	FTimerHandle HourTimer;
+	
 	UFUNCTION()
 	void HandleSanityDepleted();
 
@@ -77,7 +91,4 @@ private:
 	
 	UCSanityComponent* GetPlayerSanity() const;
 
-	int32 CurrentHour = 0;
-	bool bGameEnded = false;
-	FTimerHandle HourTimer;
 };

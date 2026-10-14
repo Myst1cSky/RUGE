@@ -20,6 +20,12 @@ void UCRuleManager::RegisterZone(FName ZoneTag, ACZoneTrigger* Zone)
     Zones.Add(ZoneTag, Zone);
 }
 
+void UCRuleManager::BeginEnforcement()
+{
+    HourTime = 0.f;
+    bHourRunning = true;
+}
+
 void UCRuleManager::LoadRules(UDataTable* Table)
 {
     Rules.Reset();
@@ -46,7 +52,7 @@ void UCRuleManager::StartHour(int32 Hour)
     CurrentHour = Hour;
     HourTime = 0.f;
     bFlawless = true;
-    bHourRunning = true;
+    bHourRunning = false;
 
     for (FCActiveRule& R : Rules)
     {
