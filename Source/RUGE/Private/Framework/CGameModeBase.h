@@ -31,11 +31,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Rules")
 	TObjectPtr<UCRuleManager> RuleManager;
 
-	UPROPERTY(VisibleAnywhere, Category = "Narrator")
-	TObjectPtr<UCNarratorComponent> Narrator;
-	
 	UPROPERTY(EditDefaultsOnly, Category = "Rules")
 	TObjectPtr<UDataTable> RuleTable;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Narrator")
+	TObjectPtr<UCNarratorComponent> Narrator;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Narrator")
 	TObjectPtr<UDataTable> NarratorTable;
@@ -43,17 +43,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Narrator")
 	TSubclassOf<UCSubtitleWidget> SubtitleWidgetClass;
 	
-	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	UPROPERTY(EditDefaultsOnly, Category = "Hour")
 	int32 TotalHours = 8;
 
 	// Real seconds per in-game hour
-	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	UPROPERTY(EditDefaultsOnly, Category = "Hour")
 	float HourDuration = 75.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	UPROPERTY(EditDefaultsOnly, Category = "Hour")
 	float SanityRecoveryPerHour = 5.f;
 	
-	UPROPERTY(EditDefaultsOnly, Category = "Night")
+	UPROPERTY(EditDefaultsOnly, Category = "Hour")
 	int32 CountdownSeconds = 5;
 
 private:

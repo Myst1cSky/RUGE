@@ -11,10 +11,10 @@
 
 namespace
 {
-	// Hour 1 = 12:00 AM, Hour 2 = 1:00 AM, and so on
+	// Hour 1 = 1:00 AM, Hour 2 = 2:00 AM, and so on
 	FString HourLabel(int32 Hour)
 	{
-		const int32 H = (Hour - 1) % 12;
+		const int32 H = Hour % 12;
 		return (H == 0) ? TEXT("12:00 AM") : FString::Printf(TEXT("%d:00 AM"), H);
 	}
 }
