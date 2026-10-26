@@ -11,6 +11,7 @@ class UCSanityComponent;
 class UCNarratorComponent;
 class UCSubtitleWidget;
 class UDataTable;
+class UCEndScreenWidget;
 
 UCLASS()
 class ACGameModeBase : public AGameModeBase
@@ -55,6 +56,13 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Hour")
 	int32 CountdownSeconds = 5;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UCEndScreenWidget> EndScreenWidgetClass;
+
+	// Seconds between the ending and the screen appearing (lets the narrator speak)
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float EndScreenDelay = 3.f;
 
 private:
 	void StartGame();
@@ -90,5 +98,8 @@ private:
 	void HandleRuleBroken(FName RuleID);
 	
 	UCSanityComponent* GetPlayerSanity() const;
+	
+	void ShowEndScreen(bool bWon);
+	FTimerHandle EndScreenTimer;
 
 };

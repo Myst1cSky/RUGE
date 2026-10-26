@@ -8,6 +8,9 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Pawn.h"
+#include "UI/CEndScreenWidget.h"
+#include "Blueprint/UserWidget.h"
+#include "GameFramework/PlayerController.h"
 
 namespace
 {
@@ -121,6 +124,9 @@ void ACGameModeBase::GameComplete()
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green,
             FString::Printf(TEXT("%s - YOU SURVIVED THE NIGHT"), *HourLabel(TotalHours + 1)));
     }
+    
+    GetWorldTimerManager().SetTimer(EndScreenTimer,
+    FTimerDelegate::CreateUObject(this, &ACGameModeBase::ShowEndScreen, true), EndScreenDelay, false);
 }
 
 void ACGameModeBase::HandleSanityDepleted()
@@ -146,6 +152,9 @@ void ACGameModeBase::GameOver()
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red,
             FString::Printf(TEXT("GAME OVER - You lost your mind at Hour %d"), CurrentHour));
     }
+    
+    GetWorldTimerManager().SetTimer(EndScreenTimer,
+    FTimerDelegate::CreateUObject(this, &ACGameModeBase::ShowEndScreen, false), EndScreenDelay, false);
 }
 
 void ACGameModeBase::HandleNarratorIdle()
@@ -247,4 +256,35 @@ UCSanityComponent* ACGameModeBase::GetPlayerSanity() const
         return Pawn->FindComponentByClass<UCSanityComponent>();
     }
     return nullptr;
+}
+
+void ACGameModeBase::ShowEndScreen(bool bWon)
+{
+    if (!EndScreenWidgetClass) return;
+
+    APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+    if (!PC) return;
+
+    UCEndScreenWidget* Screen = CreateWidget<UCEndScreenWidget>(PC, EndScreenWidgetClass);
+    if (!Screen) return;
+
+    float Percent = 0.f;
+    float Value = 0.f;
+    if (UCSanityComponent* Sanity = GetPlayerSanity())
+    {
+        Percent = Sanity->GetSanityPercent();
+        Value = Sanity->GetSanity();
+    }
+
+    const FText Title = FText::FromString(bWon ? TEXT("YOU SURVIVED THE NIGHT") : TEXT("GAME OVER"));
+    const FText Info = FText::FromString(bWon
+        ? FString::Printf(TEXT("You made it to %s"), *HourLabel(TotalHours + 1))
+        : FString::Printf(TEXT("You lost your mind at %s"), *HourLabel(CurrentHour)));
+
+    Screen->Setup(Title, Info, Percent, Value);
+    Screen->AddToViewport(100);
+
+    // Menu mode: no more movement, mouse cursor visible
+    PC->SetInputMode(FInputModeUIOnly());
+    PC->bShowMouseCursor = true;
 }

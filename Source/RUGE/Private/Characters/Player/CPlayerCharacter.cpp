@@ -12,6 +12,7 @@
 #include "InputCoreTypes.h"
 #include "Sanity/CSanityComponent.h"
 #include "Sanity/CSanityWidget.h"
+#include "Rules/CRuleManager.h"
 
 // Sets default values
 ACPlayerCharacter::ACPlayerCharacter()
@@ -148,6 +149,9 @@ void ACPlayerCharacter::ToggleFlashlight()
 {
 	bIsFlashlightOn = !bIsFlashlightOn;
 	Flashlight->SetVisibility(bIsFlashlightOn);
+
+	ReportRuleEvent(TEXT("Flashlight.Toggle"));
+	ReportRuleEvent(bIsFlashlightOn ? TEXT("Flashlight.On") : TEXT("Flashlight.Off"));
 }
 
 void ACPlayerCharacter::UpdateFlashlightRotaion()
@@ -166,6 +170,23 @@ void ACPlayerCharacter::DebugDrainSanity()
 void ACPlayerCharacter::DebugRestoreSanity()
 {
 	if (SanityComponent) SanityComponent->Restore(5.f);
+}
+
+void ACPlayerCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+	ReportRuleEvent(TEXT("Player.Jump"));
+}
+
+void ACPlayerCharacter::ReportRuleEvent(FName EventTag)
+{
+	if (ACGameModeBase* GM = GetWorld()->GetAuthGameMode<ACGameModeBase>())
+	{
+		if (UCRuleManager* RM = GM->GetRuleManager())
+		{
+			RM->ReportEvent(EventTag);
+		}
+	}
 }
 
 void ACPlayerCharacter::ReplayRulesPressed()

@@ -38,7 +38,7 @@ struct FCRuleData : public FTableRowBase
 
 	// How long it stays active each hour
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float WindowDuration = 75.f;
+	float WindowDuration = 60.f;
 
 	// Label shown in the sanity debug message
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -73,4 +73,8 @@ struct FCRuleData : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float DrainPerSecond = 1.f;
+	
+	// Spoken when its window opens instead of at the start of the hour (Simon Says style)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bAnnounceAtWindowStart = false;
 };

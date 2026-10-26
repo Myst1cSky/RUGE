@@ -52,7 +52,7 @@ void UCRuleManager::StartHour(int32 Hour)
     CurrentHour = Hour;
     HourTime = 0.f;
     bFlawless = true;
-    bHourRunning = false;
+    bHourRunning = false;   // enforced after the countdown
 
     for (FCActiveRule& R : Rules)
     {
@@ -61,6 +61,9 @@ void UCRuleManager::StartHour(int32 Hour)
         R.bResolved = false;
         R.DrainTimer = 0.f;
         R.bViolationAnnounced = false;
+
+        // Simon Says commands are spoken when their window opens
+        if (R.Data.bAnnounceAtWindowStart) continue;
 
         if (R.Data.StartHour == Hour)
         {
@@ -89,6 +92,11 @@ void UCRuleManager::TickComponent(float DeltaTime, ELevelTick TickType,
         if (!R.bActive && HourTime >= R.Data.WindowStart)
         {
             R.bActive = true;
+
+            if (R.Data.bAnnounceAtWindowStart)
+            {
+                OnRuleAnnounced.Broadcast(R.Data.RuleID, R.Data.RuleText);
+            }
         }
         if (!R.bActive) continue;
 
@@ -236,6 +244,8 @@ void UCRuleManager::AnnounceActiveRules()
 {
     for (const FCActiveRule& R : Rules)
     {
+        if (R.Data.bAnnounceAtWindowStart) continue;
+
         if (IsInHour(R.Data, CurrentHour))
         {
             OnRuleAnnounced.Broadcast(R.Data.RuleID, R.Data.RuleText);

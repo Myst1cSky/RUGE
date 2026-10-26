@@ -112,4 +112,7 @@ protected:
 	// Debug only
 	void DebugDrainSanity();
 	void DebugRestoreSanity();
+	
+	virtual void OnJumped_Implementation() override;
+	void ReportRuleEvent(FName EventTag);
 };
